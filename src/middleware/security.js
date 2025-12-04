@@ -1,11 +1,14 @@
+import express from 'express';
+import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import xss from 'xss-clean';
+import cors from 'cors';
 import config from '../config/config.js';
 
 /**
- * Security Middleware
+ * Security Middleware Configuration
  * 
  * Best Practices:
  * 1. Helmet - Set security HTTP headers
@@ -18,7 +21,7 @@ import config from '../config/config.js';
 /**
  * Rate limiting for general API
  */
-export const apiLimiter = rateLimit({
+const apiLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.max,
   message: {
@@ -45,7 +48,7 @@ export const authLimiter = rateLimit({
 /**
  * Security headers with Helmet
  */
-export const securityHeaders = helmet({
+const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -60,10 +63,43 @@ export const securityHeaders = helmet({
 /**
  * Data sanitization
  */
-export const sanitizeData = [
+const sanitizeData = [
   // Prevent NoSQL injection
   mongoSanitize(),
   // Prevent XSS attacks
   xss(),
 ];
+
+/**
+ * Setup all security middleware
+ * @param {import('express').Application} app 
+ */
+export const setupSecurity = (app) => {
+  // Trust proxy - Important for rate limiting behind reverse proxy
+  app.set('trust proxy', 1);
+
+  // Apply security headers
+  app.use(securityHeaders);
+
+  // CORS Configuration
+  app.use(
+    cors({
+      origin: config.cors.origin,
+      credentials: config.cors.credentials,
+    })
+  );
+
+  // Body Parser Middleware
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Cookie Parser
+  app.use(cookieParser());
+
+  // Data Sanitization
+  app.use(sanitizeData);
+
+  // Rate Limiting
+  app.use('/api', apiLimiter);
+};
 

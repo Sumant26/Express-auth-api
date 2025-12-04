@@ -1,17 +1,11 @@
 import express from 'express';
-import cors from 'cors';
 import morgan from 'morgan';
 import compression from 'compression';
-import cookieParser from 'cookie-parser';
 import config from './config/config.js';
 import database from './config/database.js';
 import routes from './routes/index.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
-import {
-  securityHeaders,
-  sanitizeData,
-  apiLimiter,
-} from './middleware/security.js';
+import { setupSecurity } from './middleware/security.js';
 
 /**
  * Express Server Setup
@@ -30,51 +24,23 @@ import {
 const app = express();
 
 /**
- * Trust proxy - Important for rate limiting behind reverse proxy
+ * Setup Security Middleware
+ * Handles:
+ * - Trust Proxy
+ * - Helmet (Security Headers)
+ * - CORS
+ * - Body Parsing (JSON, URL-encoded)
+ * - Cookie Parsing
+ * - Data Sanitization (NoSQL, XSS)
+ * - Rate Limiting
  */
-app.set('trust proxy', 1);
-
-/**
- * Security Middleware
- * Apply security headers first
- */
-app.use(securityHeaders);
-
-/**
- * CORS Configuration
- * Allow cross-origin requests
- */
-app.use(
-  cors({
-    origin: config.cors.origin,
-    credentials: config.cors.credentials,
-  })
-);
-
-/**
- * Body Parser Middleware
- * Parse JSON and URL-encoded data
- */
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-/**
- * Cookie Parser
- * Parse cookies from requests
- */
-app.use(cookieParser());
+setupSecurity(app);
 
 /**
  * Compression Middleware
  * Compress responses for better performance
  */
 app.use(compression());
-
-/**
- * Data Sanitization
- * Prevent NoSQL injection and XSS attacks
- */
-app.use(sanitizeData);
 
 /**
  * Request Logging
@@ -85,12 +51,6 @@ if (config.isDevelopment) {
 } else {
   app.use(morgan('combined'));
 }
-
-/**
- * Rate Limiting
- * Apply rate limiting to all routes
- */
-app.use('/api', apiLimiter);
 
 /**
  * Health Check Route
