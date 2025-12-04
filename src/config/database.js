@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import logger from '../utils/logger.js';
 
 /**
  * MongoDB Connection Handler with Advanced Features
@@ -31,7 +32,7 @@ class Database {
   async connect() {
     try {
       const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/express-advanced';
-      
+
       const options = {
         maxPoolSize: 10, // Maximum number of connections
         minPoolSize: 2,  // Minimum number of connections
@@ -44,15 +45,15 @@ class Database {
 
       // Connection event listeners
       mongoose.connection.on('connected', () => {
-        console.log('✅ MongoDB connected successfully');
+        logger.info('MongoDB connected successfully');
       });
 
       mongoose.connection.on('error', (err) => {
-        console.error('❌ MongoDB connection error:', err);
+        logger.error('MongoDB connection error:', err);
       });
 
       mongoose.connection.on('disconnected', () => {
-        console.log('⚠️ MongoDB disconnected');
+        logger.warn('MongoDB disconnected');
       });
 
       // Graceful shutdown
@@ -61,7 +62,7 @@ class Database {
 
       return this.connection;
     } catch (error) {
-      console.error('❌ Database connection failed:', error.message);
+      logger.error('Database connection failed:', error.message);
       process.exit(1);
     }
   }
@@ -72,10 +73,10 @@ class Database {
   async disconnect() {
     try {
       await mongoose.connection.close();
-      console.log('✅ MongoDB disconnected gracefully');
+      logger.info('MongoDB disconnected gracefully');
       process.exit(0);
     } catch (error) {
-      console.error('❌ Error disconnecting from MongoDB:', error);
+      logger.error('Error disconnecting from MongoDB:', error);
       process.exit(1);
     }
   }

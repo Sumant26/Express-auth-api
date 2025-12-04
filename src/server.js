@@ -6,6 +6,7 @@ import database from './config/database.js';
 import routes from './routes/index.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { setupSecurity } from './middleware/security.js';
+import logger from './utils/logger.js';
 
 /**
  * Express Server Setup
@@ -46,11 +47,14 @@ app.use(compression());
  * Request Logging
  * Log HTTP requests (only in development)
  */
-if (config.isDevelopment) {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
+const morganFormat = config.env === 'development' ? 'dev' : 'combined';
+app.use(
+  morgan(morganFormat, {
+    stream: {
+      write: (message) => logger.http(message.trim()),
+    },
+  })
+);
 
 /**
  * Health Check Route
@@ -93,16 +97,14 @@ const startServer = async () => {
 
     // Start listening
     const server = app.listen(config.port, () => {
-      console.log(`
-🚀 Server running in ${config.env} mode
-📡 Listening on port ${config.port}
-🌐 http://localhost:${config.port}
-      `);
+      logger.info(`Server running in ${config.env} mode`);
+      logger.info(`Listening on port ${config.port}`);
+      logger.info(`http://localhost:${config.port}`);
     });
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (err) => {
-      console.error('❌ Unhandled Promise Rejection:', err);
+      logger.error('Unhandled Promise Rejection:', err);
       server.close(() => {
         process.exit(1);
       });
@@ -110,11 +112,11 @@ const startServer = async () => {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (err) => {
-      console.error('❌ Uncaught Exception:', err);
+      logger.error('Uncaught Exception:', err);
       process.exit(1);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 };

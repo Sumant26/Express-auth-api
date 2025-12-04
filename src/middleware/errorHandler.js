@@ -1,5 +1,6 @@
 import config from '../config/config.js';
 import { AppError } from '../utils/AppError.js';
+import logger from '../utils/logger.js';
 
 /**
  * Global Error Handler Middleware
@@ -56,6 +57,7 @@ const handleJWTExpiredError = () => {
  * Send error response in development
  */
 const sendErrorDev = (err, res) => {
+  logger.error('ERROR 💥', err);
   res.status(err.statusCode).json({
     status: err.status,
     error: err,
@@ -78,7 +80,7 @@ const sendErrorProd = (err, res) => {
   }
   // Programming errors: don't leak error details
   else {
-    console.error('ERROR 💥', err);
+    logger.error('ERROR 💥', err);
     res.status(500).json({
       status: 'error',
       message: 'Something went wrong!',
